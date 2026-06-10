@@ -4,10 +4,5 @@
   "workspaces": [
     "apps/web",
     "packages/*"
-  ],
-  "scripts": {
-    "dev:web": "npm run dev --workspace @singlish-agent/web",
-    "build:web": "npm run build --workspace @singlish-agent/web",
-    "test:web": "npm run test --workspace @singlish-agent/web"
-  }
+  ]
 }

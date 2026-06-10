@@ -9,4 +9,4 @@ Demo-first scaffold for the Singlish Speech Intelligence Agent.
 - React upload demo
 - PostgreSQL, Redis, and MinIO local dependencies
 
-See this implementation plan for the exact setup sequence.
+See [project-plan.md](./project-plan.md) for the exact setup sequence.
