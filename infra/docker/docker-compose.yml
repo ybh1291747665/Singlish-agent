@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16.14
     container_name: singlish-agent-postgres
     environment:
       POSTGRES_DB: singlish_agent
@@ -17,7 +17,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
   redis:
-    image: redis:7
+    image: redis:7.4.9
     container_name: singlish-agent-redis
     ports:
       - "6379:6379"
