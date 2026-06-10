@@ -1,0 +1,17 @@
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+node_modules/
+dist/
+build/
+coverage/
+*.log
+.env
+uploads/
+.superpowers/
+apps/web/.vite/
+apps/web/node_modules/
