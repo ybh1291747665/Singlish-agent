@@ -14,3 +14,5 @@ Demo-first scaffold for the Singlish Speech Intelligence Agent.
 ```powershell
 docker compose -f infra/docker/docker-compose.yml up -d
 ```
+
+See [project-plan.md](./project-plan.md) for the exact setup sequence.
