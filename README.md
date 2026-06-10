@@ -9,4 +9,8 @@ Demo-first scaffold for the Singlish Speech Intelligence Agent.
 - React upload demo
 - PostgreSQL, Redis, and MinIO local dependencies
 
-See [project-plan.md](./project-plan.md) for the exact setup sequence.
+## Start Local Infrastructure
+
+```powershell
+docker compose -f infra/docker/docker-compose.yml up -d
+```
