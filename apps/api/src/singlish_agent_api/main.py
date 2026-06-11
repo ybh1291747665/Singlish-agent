@@ -3,12 +3,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from singlish_agent_api.api.routes.health import router as health_router
+from singlish_agent_api.core.config import settings
 from singlish_agent_api.infrastructure.db.session import init_db
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    await init_db()
+    if settings.init_db_on_startup:
+        await init_db()
     yield
 
 
