@@ -3,13 +3,15 @@ import type {
   HealthResponse,
   JobCreateResponse,
   JobDetailResponse,
+  JobSegmentsResponse,
 } from "@singlish-agent/contracts";
 
 import { fetchHealth } from "../features/health/api";
 import { HealthPanel } from "../features/health/HealthPanel";
-import { createJob, getJob } from "../features/jobs/api";
+import { createJob, getJob, getJobSegments } from "../features/jobs/api";
 import { JobExportLinks } from "../features/jobs/JobExportLinks";
 import { JobResultDetails } from "../features/jobs/JobResultDetails";
+import { JobSegmentList } from "../features/jobs/JobSegmentList";
 import { JobStageList } from "../features/jobs/JobStageList";
 import { UploadPanel } from "../features/jobs/UploadPanel";
 
@@ -17,6 +19,7 @@ export default function App() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [createdJob, setCreatedJob] = useState<JobCreateResponse | null>(null);
   const [jobDetail, setJobDetail] = useState<JobDetailResponse | null>(null);
+  const [jobSegments, setJobSegments] = useState<JobSegmentsResponse | null>(null);
 
   useEffect(() => {
     fetchHealth()
@@ -41,6 +44,7 @@ export default function App() {
 
     const intervalId = window.setInterval(() => {
       getJob(createdJob.job_id).then(setJobDetail).catch(() => undefined);
+      getJobSegments(createdJob.job_id).then(setJobSegments).catch(() => undefined);
     }, 1500);
 
     return () => window.clearInterval(intervalId);
@@ -50,7 +54,9 @@ export default function App() {
     const created = await createJob(file);
     setCreatedJob(created);
     const detail = await getJob(created.job_id);
+    const segments = await getJobSegments(created.job_id);
     setJobDetail(detail);
+    setJobSegments(segments);
   }
 
   return (
@@ -68,6 +74,7 @@ export default function App() {
           <p>result_summary: {jobDetail?.result_summary ?? "pending"}</p>
           <JobStageList status={jobDetail?.status ?? createdJob.status} />
           <JobResultDetails resultPayload={jobDetail?.result_payload ?? null} />
+          <JobSegmentList segments={jobSegments?.segments ?? []} />
           {jobDetail?.status === "completed" ? (
             <JobExportLinks jobId={createdJob.job_id} />
           ) : null}

@@ -66,15 +66,20 @@ def test_process_job_configures_worker_event_loop(monkeypatch) -> None:
     configured: list[bool] = []
     processed: list[str] = []
 
+    class FakeLoop:
+        def run_until_complete(self, coroutine) -> None:
+            processed.append("job-123")
+            coroutine.close()
+
     monkeypatch.setattr(
         tasks_module,
         "configure_worker_event_loop",
         lambda: configured.append(True),
     )
     monkeypatch.setattr(
-        tasks_module.asyncio,
-        "run",
-        lambda coroutine: (processed.append("job-123"), coroutine.close()),
+        tasks_module,
+        "get_worker_event_loop",
+        lambda: FakeLoop(),
     )
 
     process_job("job-123")

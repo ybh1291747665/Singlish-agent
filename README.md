@@ -52,5 +52,6 @@ npm run dev --workspace @singlish-agent/web
 5. Wait for polling to refresh the job status to `completed`.
 6. Confirm the job reaches `completed` and a transcription provider is shown in the result details.
 7. Download a Markdown or SRT export from the Exports section.
+8. Confirm the transcript segments section shows timestamped timeline items.
 
 See [docs/启动停止手册.md](./docs/启动停止手册.md) for a fuller start/stop and troubleshooting runbook.

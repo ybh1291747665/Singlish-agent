@@ -37,3 +37,14 @@ def test_configure_worker_event_loop_skips_non_windows(monkeypatch) -> None:
     runtime.configure_worker_event_loop()
 
     assert called == []
+
+
+def test_get_worker_event_loop_reuses_existing_loop(monkeypatch) -> None:
+    class FakeLoop:
+        def is_closed(self) -> bool:
+            return False
+
+    loop = FakeLoop()
+    monkeypatch.setattr(runtime, "_worker_event_loop", loop)
+
+    assert runtime.get_worker_event_loop() is loop

@@ -9,7 +9,7 @@ from singlish_agent_api.infrastructure.db.session import AsyncSessionFactory
 from singlish_agent_api.infrastructure.repositories.jobs import JobRepository
 from singlish_agent_api.infrastructure.storage.client import ObjectStorageService
 from singlish_agent_api.worker.celery_app import celery_app
-from singlish_agent_api.worker.runtime import configure_worker_event_loop
+from singlish_agent_api.worker.runtime import configure_worker_event_loop, get_worker_event_loop
 
 
 PIPELINE_STAGES: tuple[JobStatus, ...] = (
@@ -108,4 +108,5 @@ async def _process_job(job_id: str) -> None:
 @celery_app.task(name="singlish_agent.process_job")
 def process_job(job_id: str) -> None:
     configure_worker_event_loop()
-    asyncio.run(_process_job(job_id))
+    loop = get_worker_event_loop()
+    loop.run_until_complete(_process_job(job_id))

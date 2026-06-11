@@ -57,3 +57,10 @@ class JobDetailResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     processed_at: datetime | None
+
+
+class JobSegmentsResponse(BaseModel):
+    job_id: str
+    status: str
+    total_segments: int
+    segments: list[TranscriptSegment]

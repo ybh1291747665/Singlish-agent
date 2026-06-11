@@ -75,3 +75,10 @@ export type JobDetailResponse = {
   updated_at: string;
   processed_at: string | null;
 };
+
+export type JobSegmentsResponse = {
+  job_id: string;
+  status: JobStatus;
+  total_segments: number;
+  segments: TranscriptSegment[];
+};
