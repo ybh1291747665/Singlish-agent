@@ -3,6 +3,13 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class JobCreateResponse(BaseModel):
+    job_id: str
+    file_name: str
+    status: str
+    created_at: datetime
+
+
 class JobDetailResponse(BaseModel):
     job_id: str
     file_name: str

@@ -27,3 +27,9 @@ class JobRepository:
         await self.session.commit()
         await self.session.refresh(job)
         return job
+
+    async def set_result(self, job: Job, *, summary: str) -> Job:
+        job.result_summary = summary
+        await self.session.commit()
+        await self.session.refresh(job)
+        return job
