@@ -13,6 +13,7 @@ test("renders structured job results", () => {
           normalized_format: "pcm_s16le",
         },
         transcription: {
+          provider: "fake",
           raw_transcript: "wah lau eh this queue quite fast lah",
           segments: [
             {
@@ -37,6 +38,7 @@ test("renders structured job results", () => {
   );
 
   expect(screen.getByText("Duration: 12.4s")).toBeInTheDocument();
+  expect(screen.getByText("Transcription provider: fake")).toBeInTheDocument();
   expect(screen.getByText("Raw transcript: wah lau eh this queue quite fast lah")).toBeInTheDocument();
   expect(screen.getByText("Standard English: Wow, this queue is quite fast.")).toBeInTheDocument();
   expect(screen.getByText("Summary: Speaker remarks that the queue moved quickly.")).toBeInTheDocument();

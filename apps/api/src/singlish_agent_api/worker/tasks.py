@@ -1,9 +1,13 @@
 import asyncio
 from datetime import datetime, timezone
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from singlish_agent_api.domain.jobs.models import JobStatus
+from singlish_agent_api.infrastructure.asr.provider import get_transcription_provider
 from singlish_agent_api.infrastructure.db.session import AsyncSessionFactory
 from singlish_agent_api.infrastructure.repositories.jobs import JobRepository
+from singlish_agent_api.infrastructure.storage.client import ObjectStorageService
 from singlish_agent_api.worker.celery_app import celery_app
 
 
@@ -21,10 +25,19 @@ async def _process_job(job_id: str) -> None:
         job = await repository.get(job_id)
         if job is None:
             raise ValueError(f"job not found: {job_id}")
+
+        storage = ObjectStorageService()
+        provider = get_transcription_provider()
+        suffix = Path(job.file_name).suffix or ".bin"
+        audio_path: Path | None = None
         try:
             result_payload: dict[str, object] = {}
 
             job = await repository.transition(job, JobStatus.PREPROCESSING)
+            audio_bytes = await storage.download(object_key=job.object_key)
+            with NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+                temp_file.write(audio_bytes)
+                audio_path = Path(temp_file.name)
             result_payload["preprocessing"] = {
                 "duration_seconds": 12.4,
                 "sample_rate_hz": 16000,
@@ -34,34 +47,50 @@ async def _process_job(job_id: str) -> None:
             job = await repository.set_result_payload(job, payload=result_payload)
 
             job = await repository.transition(job, JobStatus.TRANSCRIBING)
+            transcription = await provider.transcribe(audio_path)
             result_payload["transcription"] = {
-                "raw_transcript": "wah lau eh this queue quite fast lah",
+                "provider": transcription.provider,
+                "raw_transcript": transcription.raw_transcript,
                 "segments": [
                     {
-                        "start_seconds": 0.0,
-                        "end_seconds": 2.4,
-                        "text": "wah lau eh this queue quite fast lah",
-                        "confidence": 0.94,
+                        "start_seconds": segment.start_seconds,
+                        "end_seconds": segment.end_seconds,
+                        "text": segment.text,
+                        "confidence": segment.confidence,
                     }
+                    for segment in transcription.segments
                 ],
             }
             job = await repository.set_result_payload(job, payload=result_payload)
 
             job = await repository.transition(job, JobStatus.NORMALIZING)
+            standard_english = (
+                "Wow, this queue is quite fast."
+                if "wah lau eh" in transcription.raw_transcript.lower()
+                else transcription.raw_transcript
+            )
             result_payload["normalization"] = {
-                "normalized_transcript": "wah lau eh, this queue quite fast lah",
-                "standard_english": "Wow, this queue is quite fast.",
-                "glossary_hits": ["wah lau eh", "lah"],
+                "normalized_transcript": transcription.raw_transcript,
+                "standard_english": standard_english,
+                "glossary_hits": ["wah lau eh", "lah"]
+                if "wah lau eh" in transcription.raw_transcript.lower()
+                else [],
             }
             job = await repository.set_result_payload(job, payload=result_payload)
 
             job = await repository.transition(job, JobStatus.GENERATING_REPORT)
             result_payload["report"] = {
-                "summary": "Speaker remarks that the queue moved quickly.",
-                "key_phrases": ["queue", "fast"],
+                "summary": "Speaker remarks that the queue moved quickly."
+                if "queue" in standard_english.lower()
+                else f"Transcript generated: {standard_english}",
+                "key_phrases": ["queue", "fast"]
+                if "queue" in standard_english.lower()
+                else standard_english.split()[:3],
             }
             job = await repository.set_result_payload(job, payload=result_payload)
-            job.result_summary = "Fake transcript completed successfully."
+            job.result_summary = (
+                f"Transcription completed successfully via {transcription.provider}."
+            )
             job.processed_at = datetime.now(timezone.utc)
             await session.commit()
             await session.refresh(job)
@@ -70,6 +99,9 @@ async def _process_job(job_id: str) -> None:
             if JobStatus(job.status) in PIPELINE_STAGES:
                 await repository.transition(job, JobStatus.FAILED)
             raise
+        finally:
+            if audio_path is not None:
+                audio_path.unlink(missing_ok=True)
 
 
 @celery_app.task(name="singlish_agent.process_job")

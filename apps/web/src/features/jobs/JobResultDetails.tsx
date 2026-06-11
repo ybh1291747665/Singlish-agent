@@ -20,6 +20,7 @@ export function JobResultDetails({ resultPayload }: Props) {
       ) : null}
       {resultPayload.transcription ? (
         <div>
+          <p>Transcription provider: {resultPayload.transcription.provider}</p>
           <p>Raw transcript: {resultPayload.transcription.raw_transcript}</p>
         </div>
       ) : null}

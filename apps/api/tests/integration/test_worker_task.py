@@ -35,6 +35,7 @@ class FakeSession:
         if getattr(job, "id", None) is None:
             job.id = str(uuid4())
             job.created_at = now
+            job.result_payload = None
         job.updated_at = now
         self.jobs[job.id] = job
         history = self.status_history.setdefault(job.id, [])
@@ -64,11 +65,37 @@ def test_process_job_runs_full_pipeline_and_marks_job_completed(monkeypatch) -> 
 
     session = FakeSession()
 
+    class FakeTranscriptionProvider:
+        async def transcribe(self, audio_path) -> object:
+            from singlish_agent_api.infrastructure.asr.provider import (
+                ASRSegmentResult,
+                ASRTranscriptionResult,
+            )
+
+            return ASRTranscriptionResult(
+                provider="fake",
+                raw_transcript="wah lau eh this queue quite fast lah",
+                segments=[
+                    ASRSegmentResult(
+                        start_seconds=0.0,
+                        end_seconds=2.4,
+                        text="wah lau eh this queue quite fast lah",
+                        confidence=0.94,
+                    )
+                ],
+            )
+
+    class FakeStorage:
+        async def download(self, *, object_key: str) -> bytes:
+            return b"fake-audio"
+
     class FakeSessionFactory:
         def __call__(self):
             return session
 
     monkeypatch.setattr(tasks_module, "AsyncSessionFactory", FakeSessionFactory())
+    monkeypatch.setattr(tasks_module, "ObjectStorageService", FakeStorage)
+    monkeypatch.setattr(tasks_module, "get_transcription_provider", lambda: FakeTranscriptionProvider())
 
     async def create_job() -> str:
         repository = JobRepository(session)
@@ -98,10 +125,11 @@ def test_process_job_runs_full_pipeline_and_marks_job_completed(monkeypatch) -> 
         JobStatus.COMPLETED.value,
     ]
     assert refreshed.status == JobStatus.COMPLETED.value
-    assert refreshed.result_summary == "Fake transcript completed successfully."
+    assert refreshed.result_summary == "Transcription completed successfully via fake."
     assert refreshed.processed_at is not None
     payload = json.loads(refreshed.result_payload)
     assert payload["preprocessing"]["duration_seconds"] == 12.4
+    assert payload["transcription"]["provider"] == "fake"
     assert payload["transcription"]["raw_transcript"] == "wah lau eh this queue quite fast lah"
     assert payload["normalization"]["standard_english"] == "Wow, this queue is quite fast."
     assert payload["report"]["summary"] == "Speaker remarks that the queue moved quickly."
@@ -118,7 +146,7 @@ def test_process_job_marks_job_failed_when_processing_errors(monkeypatch) -> Non
         async def commit(self) -> None:
             if self.should_fail and any(
                 job.status == JobStatus.GENERATING_REPORT.value
-                and job.result_summary == "Fake transcript completed successfully."
+                and job.result_summary == "Transcription completed successfully via fake."
                 for job in self.jobs.values()
             ):
                 self.should_fail = False
@@ -127,11 +155,37 @@ def test_process_job_marks_job_failed_when_processing_errors(monkeypatch) -> Non
 
     session = FailingSession()
 
+    class FakeTranscriptionProvider:
+        async def transcribe(self, audio_path) -> object:
+            from singlish_agent_api.infrastructure.asr.provider import (
+                ASRSegmentResult,
+                ASRTranscriptionResult,
+            )
+
+            return ASRTranscriptionResult(
+                provider="fake",
+                raw_transcript="wah lau eh this queue quite fast lah",
+                segments=[
+                    ASRSegmentResult(
+                        start_seconds=0.0,
+                        end_seconds=2.4,
+                        text="wah lau eh this queue quite fast lah",
+                        confidence=0.94,
+                    )
+                ],
+            )
+
+    class FakeStorage:
+        async def download(self, *, object_key: str) -> bytes:
+            return b"fake-audio"
+
     class FakeSessionFactory:
         def __call__(self):
             return session
 
     monkeypatch.setattr(tasks_module, "AsyncSessionFactory", FakeSessionFactory())
+    monkeypatch.setattr(tasks_module, "ObjectStorageService", FakeStorage)
+    monkeypatch.setattr(tasks_module, "get_transcription_provider", lambda: FakeTranscriptionProvider())
 
     async def create_job() -> str:
         repository = JobRepository(session)

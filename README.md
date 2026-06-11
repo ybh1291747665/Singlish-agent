@@ -35,6 +35,8 @@ python -m uvicorn singlish_agent_api.main:app --app-dir apps/api/src --reload --
 python -m singlish_agent_api.worker.run_worker
 ```
 
+For real offline ASR, start the worker from the `singlish-agent` conda environment so it can load `faster-whisper` and related audio dependencies.
+
 ## Start The Web App
 
 ```powershell
@@ -48,6 +50,6 @@ npm run dev --workspace @singlish-agent/web
 3. Upload a small `.wav` file.
 4. Confirm the UI shows the new `job_id`.
 5. Wait for polling to refresh the job status to `completed`.
-6. Confirm the fake result summary appears.
+6. Confirm the job reaches `completed` and a transcription provider is shown in the result details.
 
 See [docs/启动停止手册.md](./docs/启动停止手册.md) for a fuller start/stop and troubleshooting runbook.

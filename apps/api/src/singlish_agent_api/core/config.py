@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     s3_bucket: str = "singlish-agent"
     s3_region: str = "us-east-1"
     celery_task_always_eager: bool = False
+    asr_backend: str = "auto"
+    asr_model_size: str = "tiny.en"
+    asr_device: str = "cpu"
+    asr_compute_type: str = "int8"
 
     model_config = SettingsConfigDict(
         env_file=".env",

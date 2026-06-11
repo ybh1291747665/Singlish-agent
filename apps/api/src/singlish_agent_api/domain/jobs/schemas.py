@@ -18,6 +18,7 @@ class PreprocessingResult(BaseModel):
 
 
 class TranscriptionResult(BaseModel):
+    provider: str
     raw_transcript: str
     segments: list[TranscriptSegment]
 

@@ -27,6 +27,7 @@ export type PreprocessingResult = {
 };
 
 export type TranscriptionResult = {
+  provider: string;
   raw_transcript: string;
   segments: TranscriptSegment[];
 };

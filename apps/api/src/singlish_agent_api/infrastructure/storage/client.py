@@ -21,6 +21,17 @@ class ObjectStorageService:
             ContentType=content_type,
         )
 
+    async def download(self, *, object_key: str) -> bytes:
+        response = await asyncio.to_thread(
+            self.client.get_object,
+            Bucket=settings.s3_bucket,
+            Key=object_key,
+        )
+        try:
+            return await asyncio.to_thread(response["Body"].read)
+        finally:
+            response["Body"].close()
+
 
 def get_s3_client() -> BaseClient:
     return boto3.client(
