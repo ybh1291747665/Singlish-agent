@@ -8,6 +8,20 @@ from botocore.exceptions import BotoCoreError, ClientError
 from singlish_agent_api.core.config import settings
 
 
+class ObjectStorageService:
+    def __init__(self) -> None:
+        self.client = get_s3_client()
+
+    async def upload(self, *, object_key: str, content: bytes, content_type: str) -> None:
+        await asyncio.to_thread(
+            self.client.put_object,
+            Bucket=settings.s3_bucket,
+            Key=object_key,
+            Body=content,
+            ContentType=content_type,
+        )
+
+
 def get_s3_client() -> BaseClient:
     return boto3.client(
         "s3",

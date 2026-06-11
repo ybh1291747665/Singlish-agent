@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     s3_secret_key: str = "minioadmin"
     s3_bucket: str = "singlish-agent"
     s3_region: str = "us-east-1"
+    celery_task_always_eager: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -5,18 +7,20 @@ from singlish_agent_api.domain.jobs.schemas import JobCreateResponse, JobDetailR
 from singlish_agent_api.domain.jobs.service import create_job_from_upload
 from singlish_agent_api.infrastructure.db.session import AsyncSessionFactory
 from singlish_agent_api.infrastructure.repositories.jobs import JobRepository
+from singlish_agent_api.infrastructure.storage.client import ObjectStorageService
+from singlish_agent_api.worker.celery_app import celery_app
+from singlish_agent_api.worker.tasks import process_job
 
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 
 
-class NoopQueue:
+class CeleryQueue:
     async def enqueue(self, job_id: str) -> None:
-        return None
-
-
-class NoopStorage:
-    async def upload(self, *, object_key: str, content: bytes, content_type: str) -> None:
+        if celery_app.conf.task_always_eager:
+            await asyncio.to_thread(process_job.delay, job_id)
+            return None
+        process_job.delay(job_id)
         return None
 
 
@@ -25,20 +29,20 @@ async def get_session() -> AsyncSession:
         yield session
 
 
-def get_storage() -> NoopStorage:
-    return NoopStorage()
+def get_storage() -> ObjectStorageService:
+    return ObjectStorageService()
 
 
-def get_queue() -> NoopQueue:
-    return NoopQueue()
+def get_queue() -> CeleryQueue:
+    return CeleryQueue()
 
 
 @router.post("", response_model=JobCreateResponse, status_code=201)
 async def create_job(
     file: UploadFile = File(...),
     session: AsyncSession = Depends(get_session),
-    storage: NoopStorage = Depends(get_storage),
-    queue: NoopQueue = Depends(get_queue),
+    storage: ObjectStorageService = Depends(get_storage),
+    queue: CeleryQueue = Depends(get_queue),
 ) -> JobCreateResponse:
     job_id, file_name, status, created_at = await create_job_from_upload(
         upload_file=file,
