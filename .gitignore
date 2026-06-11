@@ -16,3 +16,5 @@ uploads/
 .superpowers/
 apps/web/.vite/
 apps/web/node_modules/
+.agents/
+skills-lock.json

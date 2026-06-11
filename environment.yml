@@ -1,0 +1,17 @@
+name: singlish-agent
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - ffmpeg
+  - pip:
+      # RTX 50-series support requires a CUDA 12.8-compatible PyTorch build.
+      - --extra-index-url https://download.pytorch.org/whl/cu128
+      - torch==2.11.0+cu128
+      - torchaudio==2.11.0+cu128
+      - -r requirements.txt
+variables:
+  PYTHONNOUSERSITE: "1"
+  PYTHONUTF8: "1"

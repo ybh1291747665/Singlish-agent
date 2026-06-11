@@ -49,3 +49,5 @@ npm run dev --workspace @singlish-agent/web
 4. Confirm the UI shows the new `job_id`.
 5. Wait for polling to refresh the job status to `completed`.
 6. Confirm the fake result summary appears.
+
+See [docs/启动停止手册.md](./docs/启动停止手册.md) for a fuller start/stop and troubleshooting runbook.

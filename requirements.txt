@@ -1,0 +1,77 @@
+# Web API and configuration
+fastapi
+uvicorn[standard]
+pydantic-settings
+python-multipart
+python-dotenv
+aiofiles
+httpx
+tenacity
+orjson
+structlog
+rich
+typer
+
+# Persistence, queue, cache, and object storage
+sqlalchemy[asyncio]
+asyncpg
+alembic
+pgvector
+redis
+celery[redis]
+boto3
+
+# Speech and audio processing
+faster-whisper
+av
+soundfile
+librosa
+silero-vad
+webrtcvad-wheels
+srt
+webvtt-py
+
+# Agent, LLM, and retrieval
+langchain
+langchain-core
+langchain-community
+langchain-openai
+langchain-postgres
+langgraph
+openai
+tiktoken
+sentence-transformers
+rank-bm25
+huggingface-hub
+
+# Evaluation and data analysis
+numpy
+scipy
+pandas
+matplotlib
+seaborn
+jiwer
+rapidfuzz
+sacrebleu
+
+# Observability
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-httpx
+opentelemetry-instrumentation-sqlalchemy
+opentelemetry-instrumentation-redis
+opentelemetry-instrumentation-celery
+prometheus-client
+
+# Development and testing
+pytest
+pytest-asyncio
+pytest-cov
+pytest-mock
+respx
+hypothesis
+ruff
+mypy
+pre-commit
