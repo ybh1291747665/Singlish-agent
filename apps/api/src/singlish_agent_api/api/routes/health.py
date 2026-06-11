@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -20,9 +22,11 @@ async def check_database() -> bool:
 
 @router.get("/health")
 async def health() -> dict[str, object]:
-    database_ok = await check_database()
-    redis_ok = await check_redis()
-    storage_ok = await check_storage()
+    database_ok, redis_ok, storage_ok = await asyncio.gather(
+        check_database(),
+        check_redis(),
+        check_storage(),
+    )
 
     services = {
         "app": "ok",

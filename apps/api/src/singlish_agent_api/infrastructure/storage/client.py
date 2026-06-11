@@ -1,5 +1,8 @@
+import asyncio
+
 import boto3
 from botocore.client import BaseClient
+from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 
 from singlish_agent_api.core.config import settings
@@ -12,12 +15,17 @@ def get_s3_client() -> BaseClient:
         aws_access_key_id=settings.s3_access_key,
         aws_secret_access_key=settings.s3_secret_key,
         region_name=settings.s3_region,
+        config=Config(
+            connect_timeout=1,
+            read_timeout=1,
+            retries={"max_attempts": 0},
+        ),
     )
 
 
 async def check_storage() -> bool:
     try:
-        get_s3_client().head_bucket(Bucket=settings.s3_bucket)
+        await asyncio.to_thread(get_s3_client().head_bucket, Bucket=settings.s3_bucket)
         return True
     except (BotoCoreError, ClientError):
         return False
