@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
+import json
 from uuid import uuid4
 
 import pytest
@@ -99,6 +100,11 @@ def test_process_job_runs_full_pipeline_and_marks_job_completed(monkeypatch) -> 
     assert refreshed.status == JobStatus.COMPLETED.value
     assert refreshed.result_summary == "Fake transcript completed successfully."
     assert refreshed.processed_at is not None
+    payload = json.loads(refreshed.result_payload)
+    assert payload["preprocessing"]["duration_seconds"] == 12.4
+    assert payload["transcription"]["raw_transcript"] == "wah lau eh this queue quite fast lah"
+    assert payload["normalization"]["standard_english"] == "Wow, this queue is quite fast."
+    assert payload["report"]["summary"] == "Speaker remarks that the queue moved quickly."
 
 
 def test_process_job_marks_job_failed_when_processing_errors(monkeypatch) -> None:

@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +32,12 @@ class JobRepository:
 
     async def set_result(self, job: Job, *, summary: str) -> Job:
         job.result_summary = summary
+        await self.session.commit()
+        await self.session.refresh(job)
+        return job
+
+    async def set_result_payload(self, job: Job, *, payload: dict[str, object]) -> Job:
+        job.result_payload = json.dumps(payload)
         await self.session.commit()
         await self.session.refresh(job)
         return job

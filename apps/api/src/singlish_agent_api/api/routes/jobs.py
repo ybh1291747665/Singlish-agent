@@ -1,9 +1,10 @@
+import json
 import asyncio
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from singlish_agent_api.domain.jobs.schemas import JobCreateResponse, JobDetailResponse
+from singlish_agent_api.domain.jobs.schemas import JobCreateResponse, JobDetailResponse, JobResultPayload
 from singlish_agent_api.domain.jobs.service import create_job_from_upload
 from singlish_agent_api.infrastructure.db.session import AsyncSessionFactory
 from singlish_agent_api.infrastructure.repositories.jobs import JobRepository
@@ -72,6 +73,9 @@ async def get_job(
         file_name=job.file_name,
         status=job.status,
         result_summary=job.result_summary,
+        result_payload=JobResultPayload.model_validate(json.loads(job.result_payload))
+        if job.result_payload
+        else None,
         created_at=job.created_at,
         updated_at=job.updated_at,
         processed_at=job.processed_at,

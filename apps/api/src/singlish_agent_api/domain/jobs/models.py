@@ -45,6 +45,7 @@ class Job(Base):
     object_key: Mapped[str] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(32), default=JobStatus.CREATED.value)
     result_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result_payload: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
