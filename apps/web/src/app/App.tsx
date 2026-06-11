@@ -8,6 +8,7 @@ import type {
 import { fetchHealth } from "../features/health/api";
 import { HealthPanel } from "../features/health/HealthPanel";
 import { createJob, getJob } from "../features/jobs/api";
+import { JobExportLinks } from "../features/jobs/JobExportLinks";
 import { JobResultDetails } from "../features/jobs/JobResultDetails";
 import { JobStageList } from "../features/jobs/JobStageList";
 import { UploadPanel } from "../features/jobs/UploadPanel";
@@ -67,6 +68,9 @@ export default function App() {
           <p>result_summary: {jobDetail?.result_summary ?? "pending"}</p>
           <JobStageList status={jobDetail?.status ?? createdJob.status} />
           <JobResultDetails resultPayload={jobDetail?.result_payload ?? null} />
+          {jobDetail?.status === "completed" ? (
+            <JobExportLinks jobId={createdJob.job_id} />
+          ) : null}
         </section>
       ) : null}
     </main>

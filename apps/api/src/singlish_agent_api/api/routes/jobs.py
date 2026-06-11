@@ -2,8 +2,11 @@ import json
 import asyncio
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from singlish_agent_api.domain.jobs.exports import JobExportFormat, build_job_export
+from singlish_agent_api.domain.jobs.models import JobStatus
 from singlish_agent_api.domain.jobs.schemas import JobCreateResponse, JobDetailResponse, JobResultPayload
 from singlish_agent_api.domain.jobs.service import create_job_from_upload
 from singlish_agent_api.infrastructure.db.session import AsyncSessionFactory
@@ -79,4 +82,28 @@ async def get_job(
         created_at=job.created_at,
         updated_at=job.updated_at,
         processed_at=job.processed_at,
+    )
+
+
+@router.get("/{job_id}/exports/{export_format}")
+async def export_job(
+    job_id: str,
+    export_format: JobExportFormat,
+    session: AsyncSession = Depends(get_session),
+) -> Response:
+    repository = JobRepository(session)
+    job = await repository.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    if job.status != JobStatus.COMPLETED.value or not job.result_payload:
+        raise HTTPException(status_code=409, detail="job export not ready")
+
+    payload = JobResultPayload.model_validate(json.loads(job.result_payload))
+    document = build_job_export(job=job, payload=payload, export_format=export_format)
+    return Response(
+        content=document.content,
+        media_type=document.media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{document.file_name}"',
+        },
     )

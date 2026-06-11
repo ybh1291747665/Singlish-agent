@@ -60,6 +60,29 @@ def test_worker_task_is_registered_with_celery_app() -> None:
     assert "singlish_agent.process_job" in celery_app.tasks
 
 
+def test_process_job_configures_worker_event_loop(monkeypatch) -> None:
+    from singlish_agent_api.worker import tasks as tasks_module
+
+    configured: list[bool] = []
+    processed: list[str] = []
+
+    monkeypatch.setattr(
+        tasks_module,
+        "configure_worker_event_loop",
+        lambda: configured.append(True),
+    )
+    monkeypatch.setattr(
+        tasks_module.asyncio,
+        "run",
+        lambda coroutine: (processed.append("job-123"), coroutine.close()),
+    )
+
+    process_job("job-123")
+
+    assert configured == [True]
+    assert processed == ["job-123"]
+
+
 def test_process_job_runs_full_pipeline_and_marks_job_completed(monkeypatch) -> None:
     from singlish_agent_api.worker import tasks as tasks_module
 

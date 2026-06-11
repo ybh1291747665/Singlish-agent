@@ -9,8 +9,11 @@ export const JOB_PIPELINE_STAGES = [
   "completed",
 ] as const;
 
+export const JOB_EXPORT_FORMATS = ["txt", "md", "json", "srt", "vtt"] as const;
+
 export type JobPipelineStage = (typeof JOB_PIPELINE_STAGES)[number];
 export type JobStatus = JobPipelineStage | "failed";
+export type JobExportFormat = (typeof JOB_EXPORT_FORMATS)[number];
 
 export type TranscriptSegment = {
   start_seconds: number;

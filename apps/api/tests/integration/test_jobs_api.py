@@ -1,3 +1,4 @@
+import json
 from io import BytesIO
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -27,6 +28,7 @@ class FakeSession:
         job.updated_at = now
         job.processed_at = None
         job.result_summary = None
+        job.result_payload = None
         self.jobs[job.id] = job
 
     async def commit(self) -> None:
@@ -174,4 +176,108 @@ def test_create_job_keeps_uploaded_status_when_enqueue_fails() -> None:
     created_job = next(iter(session.jobs.values()))
     assert response.status_code == 500
     assert created_job.status == JobStatus.UPLOADED.value
+    app.dependency_overrides.clear()
+
+
+def test_export_job_returns_markdown_document_for_completed_job() -> None:
+    from singlish_agent_api.api.routes import jobs as jobs_module
+
+    session = FakeSession()
+
+    class FakeStorage:
+        async def upload(self, *, object_key: str, content: bytes, content_type: str) -> None:
+            return None
+
+    class FakeQueue:
+        async def enqueue(self, job_id: str) -> None:
+            return None
+
+    async def override_session():
+        yield session
+
+    app.dependency_overrides[jobs_module.get_session] = override_session
+    app.dependency_overrides[jobs_module.get_storage] = lambda: FakeStorage()
+    app.dependency_overrides[jobs_module.get_queue] = lambda: FakeQueue()
+
+    client = TestClient(app)
+    create_response = client.post(
+        "/api/v1/jobs",
+        files={"file": ("sample.wav", b"demo-audio", "audio/wav")},
+    )
+    job_id = create_response.json()["job_id"]
+    job = session.jobs[job_id]
+    job.status = JobStatus.COMPLETED.value
+    job.result_summary = "Transcription completed successfully via fake."
+    job.result_payload = json.dumps(
+        {
+            "preprocessing": {
+                "duration_seconds": 2.4,
+                "sample_rate_hz": 16000,
+                "channels": 1,
+                "normalized_format": "pcm_s16le",
+            },
+            "transcription": {
+                "provider": "fake",
+                "raw_transcript": "wah lau eh this queue quite fast lah",
+                "segments": [
+                    {
+                        "start_seconds": 0.0,
+                        "end_seconds": 2.4,
+                        "text": "wah lau eh this queue quite fast lah",
+                        "confidence": 0.94,
+                    }
+                ],
+            },
+            "normalization": {
+                "normalized_transcript": "wah lau eh this queue quite fast lah",
+                "standard_english": "Wow, this queue is quite fast.",
+                "glossary_hits": ["wah lau eh", "lah"],
+            },
+            "report": {
+                "summary": "Speaker remarks that the queue moved quickly.",
+                "key_phrases": ["queue", "fast"],
+            },
+        }
+    )
+
+    response = client.get(f"/api/v1/jobs/{job_id}/exports/md")
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"].endswith(f"sample-{job_id}.md\"")
+    assert "## Summary" in response.text
+    assert "Speaker remarks that the queue moved quickly." in response.text
+    app.dependency_overrides.clear()
+
+
+def test_export_job_returns_conflict_when_job_not_completed() -> None:
+    from singlish_agent_api.api.routes import jobs as jobs_module
+
+    session = FakeSession()
+
+    class FakeStorage:
+        async def upload(self, *, object_key: str, content: bytes, content_type: str) -> None:
+            return None
+
+    class FakeQueue:
+        async def enqueue(self, job_id: str) -> None:
+            return None
+
+    async def override_session():
+        yield session
+
+    app.dependency_overrides[jobs_module.get_session] = override_session
+    app.dependency_overrides[jobs_module.get_storage] = lambda: FakeStorage()
+    app.dependency_overrides[jobs_module.get_queue] = lambda: FakeQueue()
+
+    client = TestClient(app)
+    create_response = client.post(
+        "/api/v1/jobs",
+        files={"file": ("sample.wav", b"demo-audio", "audio/wav")},
+    )
+    job_id = create_response.json()["job_id"]
+
+    response = client.get(f"/api/v1/jobs/{job_id}/exports/srt")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "job export not ready"
     app.dependency_overrides.clear()

@@ -1,4 +1,8 @@
-import type { JobCreateResponse, JobDetailResponse } from "@singlish-agent/contracts";
+import type {
+  JobCreateResponse,
+  JobDetailResponse,
+  JobExportFormat,
+} from "@singlish-agent/contracts";
 
 import { API_BASE_URL, apiFetch } from "../../shared/api/client";
 
@@ -20,4 +24,8 @@ export async function createJob(file: File): Promise<JobCreateResponse> {
 
 export function getJob(jobId: string): Promise<JobDetailResponse> {
   return apiFetch<JobDetailResponse>(`/api/v1/jobs/${jobId}`);
+}
+
+export function getJobExportUrl(jobId: string, exportFormat: JobExportFormat): string {
+  return `${API_BASE_URL}/api/v1/jobs/${jobId}/exports/${exportFormat}`;
 }
