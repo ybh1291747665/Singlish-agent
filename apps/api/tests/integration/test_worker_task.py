@@ -117,12 +117,28 @@ def test_process_job_runs_full_pipeline_and_marks_job_completed(monkeypatch) -> 
         async def download(self, *, object_key: str) -> bytes:
             return b"fake-audio"
 
+    class FakePreprocessedAudioResult:
+        def __init__(self, audio_path) -> None:
+            self.audio_path = audio_path
+            self.duration_seconds = 2.4
+            self.sample_rate_hz = 16000
+            self.channels = 1
+            self.normalized_format = "pcm_s16le"
+
+    async def fake_preprocess_audio_file(audio_path):
+        return FakePreprocessedAudioResult(audio_path)
+
     class FakeSessionFactory:
         def __call__(self):
             return session
 
     monkeypatch.setattr(tasks_module, "AsyncSessionFactory", FakeSessionFactory())
     monkeypatch.setattr(tasks_module, "ObjectStorageService", FakeStorage)
+    monkeypatch.setattr(
+        tasks_module,
+        "preprocess_audio_file",
+        fake_preprocess_audio_file,
+    )
     monkeypatch.setattr(tasks_module, "get_transcription_provider", lambda: FakeTranscriptionProvider())
 
     async def create_job() -> str:
@@ -156,7 +172,7 @@ def test_process_job_runs_full_pipeline_and_marks_job_completed(monkeypatch) -> 
     assert refreshed.result_summary == "Transcription completed successfully via fake."
     assert refreshed.processed_at is not None
     payload = json.loads(refreshed.result_payload)
-    assert payload["preprocessing"]["duration_seconds"] == 12.4
+    assert payload["preprocessing"]["duration_seconds"] == 2.4
     assert payload["transcription"]["provider"] == "fake"
     assert payload["transcription"]["raw_transcript"] == "wah lau eh this queue quite fast lah"
     assert payload["normalization"]["standard_english"] == "Wow, this queue is quite fast."
@@ -207,12 +223,28 @@ def test_process_job_marks_job_failed_when_processing_errors(monkeypatch) -> Non
         async def download(self, *, object_key: str) -> bytes:
             return b"fake-audio"
 
+    class FakePreprocessedAudioResult:
+        def __init__(self, audio_path) -> None:
+            self.audio_path = audio_path
+            self.duration_seconds = 2.4
+            self.sample_rate_hz = 16000
+            self.channels = 1
+            self.normalized_format = "pcm_s16le"
+
+    async def fake_preprocess_audio_file(audio_path):
+        return FakePreprocessedAudioResult(audio_path)
+
     class FakeSessionFactory:
         def __call__(self):
             return session
 
     monkeypatch.setattr(tasks_module, "AsyncSessionFactory", FakeSessionFactory())
     monkeypatch.setattr(tasks_module, "ObjectStorageService", FakeStorage)
+    monkeypatch.setattr(
+        tasks_module,
+        "preprocess_audio_file",
+        fake_preprocess_audio_file,
+    )
     monkeypatch.setattr(tasks_module, "get_transcription_provider", lambda: FakeTranscriptionProvider())
 
     async def create_job() -> str:

@@ -5,6 +5,7 @@ from tempfile import NamedTemporaryFile
 
 from singlish_agent_api.domain.jobs.models import JobStatus
 from singlish_agent_api.infrastructure.asr.provider import get_transcription_provider
+from singlish_agent_api.infrastructure.audio.preprocess import preprocess_audio_file
 from singlish_agent_api.infrastructure.db.session import AsyncSessionFactory
 from singlish_agent_api.infrastructure.repositories.jobs import JobRepository
 from singlish_agent_api.infrastructure.storage.client import ObjectStorageService
@@ -30,7 +31,8 @@ async def _process_job(job_id: str) -> None:
         storage = ObjectStorageService()
         provider = get_transcription_provider()
         suffix = Path(job.file_name).suffix or ".bin"
-        audio_path: Path | None = None
+        source_audio_path: Path | None = None
+        normalized_audio_path: Path | None = None
         try:
             result_payload: dict[str, object] = {}
 
@@ -38,17 +40,19 @@ async def _process_job(job_id: str) -> None:
             audio_bytes = await storage.download(object_key=job.object_key)
             with NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
                 temp_file.write(audio_bytes)
-                audio_path = Path(temp_file.name)
+                source_audio_path = Path(temp_file.name)
+            preprocessed_audio = await preprocess_audio_file(source_audio_path)
+            normalized_audio_path = preprocessed_audio.audio_path
             result_payload["preprocessing"] = {
-                "duration_seconds": 12.4,
-                "sample_rate_hz": 16000,
-                "channels": 1,
-                "normalized_format": "pcm_s16le",
+                "duration_seconds": preprocessed_audio.duration_seconds,
+                "sample_rate_hz": preprocessed_audio.sample_rate_hz,
+                "channels": preprocessed_audio.channels,
+                "normalized_format": preprocessed_audio.normalized_format,
             }
             job = await repository.set_result_payload(job, payload=result_payload)
 
             job = await repository.transition(job, JobStatus.TRANSCRIBING)
-            transcription = await provider.transcribe(audio_path)
+            transcription = await provider.transcribe(normalized_audio_path)
             result_payload["transcription"] = {
                 "provider": transcription.provider,
                 "raw_transcript": transcription.raw_transcript,
@@ -101,8 +105,10 @@ async def _process_job(job_id: str) -> None:
                 await repository.transition(job, JobStatus.FAILED)
             raise
         finally:
-            if audio_path is not None:
-                audio_path.unlink(missing_ok=True)
+            if normalized_audio_path is not None:
+                normalized_audio_path.unlink(missing_ok=True)
+            if source_audio_path is not None:
+                source_audio_path.unlink(missing_ok=True)
 
 
 @celery_app.task(name="singlish_agent.process_job")

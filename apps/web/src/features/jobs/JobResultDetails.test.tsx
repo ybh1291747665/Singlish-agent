@@ -38,6 +38,8 @@ test("renders structured job results", () => {
   );
 
   expect(screen.getByText("Duration: 12.4s")).toBeInTheDocument();
+  expect(screen.getByText("Channels: 1")).toBeInTheDocument();
+  expect(screen.getByText("Normalized format: pcm_s16le")).toBeInTheDocument();
   expect(screen.getByText("Transcription provider: fake")).toBeInTheDocument();
   expect(screen.getByText("Raw transcript: wah lau eh this queue quite fast lah")).toBeInTheDocument();
   expect(screen.getByText("Standard English: Wow, this queue is quite fast.")).toBeInTheDocument();

@@ -36,6 +36,7 @@ python -m singlish_agent_api.worker.run_worker
 ```
 
 For real offline ASR, start the worker from the `singlish-agent` conda environment so it can load `faster-whisper` and related audio dependencies.
+That same environment is also used for real audio preprocessing metadata extraction and normalization.
 
 ## Start The Web App
 

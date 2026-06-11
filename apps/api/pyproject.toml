@@ -12,6 +12,7 @@ dependencies = [
   "python-multipart",
   "sqlalchemy[asyncio]",
   "asyncpg",
+  "av",
   "redis",
   "boto3",
   "celery[redis]",

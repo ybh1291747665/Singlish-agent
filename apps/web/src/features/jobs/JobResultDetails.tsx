@@ -16,6 +16,8 @@ export function JobResultDetails({ resultPayload }: Props) {
         <div>
           <p>Duration: {resultPayload.preprocessing.duration_seconds}s</p>
           <p>Sample rate: {resultPayload.preprocessing.sample_rate_hz}Hz</p>
+          <p>Channels: {resultPayload.preprocessing.channels}</p>
+          <p>Normalized format: {resultPayload.preprocessing.normalized_format}</p>
         </div>
       ) : null}
       {resultPayload.transcription ? (
