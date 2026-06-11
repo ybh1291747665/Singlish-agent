@@ -13,12 +13,17 @@ async def _process_job(job_id: str) -> None:
         job = await repository.get(job_id)
         if job is None:
             raise ValueError(f"job not found: {job_id}")
-        job = await repository.transition(job, JobStatus.PROCESSING)
-        job.result_summary = "Fake transcript completed successfully."
-        job.processed_at = datetime.now(timezone.utc)
-        await session.commit()
-        await session.refresh(job)
-        await repository.transition(job, JobStatus.COMPLETED)
+        try:
+            job = await repository.transition(job, JobStatus.PROCESSING)
+            job.result_summary = "Fake transcript completed successfully."
+            job.processed_at = datetime.now(timezone.utc)
+            await session.commit()
+            await session.refresh(job)
+            await repository.transition(job, JobStatus.COMPLETED)
+        except Exception:
+            if job.status == JobStatus.PROCESSING.value:
+                await repository.transition(job, JobStatus.FAILED)
+            raise
 
 
 @celery_app.task(name="singlish_agent.process_job")

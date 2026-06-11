@@ -7,6 +7,7 @@ celery_app = Celery(
     "singlish_agent",
     broker=settings.redis_url,
     backend=settings.redis_url,
+    include=["singlish_agent_api.worker.tasks"],
 )
 
 celery_app.conf.update(

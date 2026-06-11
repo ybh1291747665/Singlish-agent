@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+from singlish_agent_api.domain.jobs.models import JobStatus
 from singlish_agent_api.main import app
 
 
@@ -109,4 +110,68 @@ def test_get_job_returns_job_detail() -> None:
 
     assert response.status_code == 200
     assert response.json()["job_id"] == job_id
+    app.dependency_overrides.clear()
+
+
+def test_create_job_keeps_created_status_when_upload_fails() -> None:
+    from singlish_agent_api.api.routes import jobs as jobs_module
+
+    session = FakeSession()
+
+    class FailingStorage:
+        async def upload(self, *, object_key: str, content: bytes, content_type: str) -> None:
+            raise RuntimeError("upload failed")
+
+    class FakeQueue:
+        async def enqueue(self, job_id: str) -> None:
+            return None
+
+    async def override_session():
+        yield session
+
+    app.dependency_overrides[jobs_module.get_session] = override_session
+    app.dependency_overrides[jobs_module.get_storage] = lambda: FailingStorage()
+    app.dependency_overrides[jobs_module.get_queue] = lambda: FakeQueue()
+
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.post(
+        "/api/v1/jobs",
+        files={"file": ("sample.wav", b"demo-audio", "audio/wav")},
+    )
+
+    created_job = next(iter(session.jobs.values()))
+    assert response.status_code == 500
+    assert created_job.status == JobStatus.CREATED.value
+    app.dependency_overrides.clear()
+
+
+def test_create_job_keeps_uploaded_status_when_enqueue_fails() -> None:
+    from singlish_agent_api.api.routes import jobs as jobs_module
+
+    session = FakeSession()
+
+    class FakeStorage:
+        async def upload(self, *, object_key: str, content: bytes, content_type: str) -> None:
+            return None
+
+    class FailingQueue:
+        async def enqueue(self, job_id: str) -> None:
+            raise RuntimeError("queue publish failed")
+
+    async def override_session():
+        yield session
+
+    app.dependency_overrides[jobs_module.get_session] = override_session
+    app.dependency_overrides[jobs_module.get_storage] = lambda: FakeStorage()
+    app.dependency_overrides[jobs_module.get_queue] = lambda: FailingQueue()
+
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.post(
+        "/api/v1/jobs",
+        files={"file": ("sample.wav", b"demo-audio", "audio/wav")},
+    )
+
+    created_job = next(iter(session.jobs.values()))
+    assert response.status_code == 500
+    assert created_job.status == JobStatus.UPLOADED.value
     app.dependency_overrides.clear()
