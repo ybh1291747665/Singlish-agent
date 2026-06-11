@@ -21,6 +21,7 @@ class FakeResult:
 class FakeSession:
     def __init__(self) -> None:
         self.jobs: dict[str, object] = {}
+        self.status_history: dict[str, list[str]] = {}
 
     async def __aenter__(self):
         return self
@@ -35,12 +36,18 @@ class FakeSession:
             job.created_at = now
         job.updated_at = now
         self.jobs[job.id] = job
+        history = self.status_history.setdefault(job.id, [])
+        if not history or history[-1] != job.status:
+            history.append(job.status)
 
     async def commit(self) -> None:
         return None
 
     async def refresh(self, job) -> None:
         self.jobs[job.id] = job
+        history = self.status_history.setdefault(job.id, [])
+        if history[-1] != job.status:
+            history.append(job.status)
 
     async def execute(self, statement):
         job_id = statement.whereclause.right.value
@@ -51,7 +58,7 @@ def test_worker_task_is_registered_with_celery_app() -> None:
     assert "singlish_agent.process_job" in celery_app.tasks
 
 
-def test_process_job_marks_job_completed(monkeypatch) -> None:
+def test_process_job_runs_full_pipeline_and_marks_job_completed(monkeypatch) -> None:
     from singlish_agent_api.worker import tasks as tasks_module
 
     session = FakeSession()
@@ -79,6 +86,16 @@ def test_process_job_marks_job_completed(monkeypatch) -> None:
 
     refreshed = asyncio.run(fetch_job(job_id))
     assert refreshed is not None
+    assert session.status_history[job_id] == [
+        JobStatus.CREATED.value,
+        JobStatus.UPLOADED.value,
+        JobStatus.QUEUED.value,
+        JobStatus.PREPROCESSING.value,
+        JobStatus.TRANSCRIBING.value,
+        JobStatus.NORMALIZING.value,
+        JobStatus.GENERATING_REPORT.value,
+        JobStatus.COMPLETED.value,
+    ]
     assert refreshed.status == JobStatus.COMPLETED.value
     assert refreshed.result_summary == "Fake transcript completed successfully."
     assert refreshed.processed_at is not None
@@ -94,7 +111,7 @@ def test_process_job_marks_job_failed_when_processing_errors(monkeypatch) -> Non
 
         async def commit(self) -> None:
             if self.should_fail and any(
-                job.status == JobStatus.PROCESSING.value
+                job.status == JobStatus.GENERATING_REPORT.value
                 and job.result_summary == "Fake transcript completed successfully."
                 for job in self.jobs.values()
             ):

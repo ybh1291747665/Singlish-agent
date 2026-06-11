@@ -7,6 +7,14 @@ from singlish_agent_api.infrastructure.repositories.jobs import JobRepository
 from singlish_agent_api.worker.celery_app import celery_app
 
 
+PIPELINE_STAGES: tuple[JobStatus, ...] = (
+    JobStatus.PREPROCESSING,
+    JobStatus.TRANSCRIBING,
+    JobStatus.NORMALIZING,
+    JobStatus.GENERATING_REPORT,
+)
+
+
 async def _process_job(job_id: str) -> None:
     async with AsyncSessionFactory() as session:
         repository = JobRepository(session)
@@ -14,14 +22,15 @@ async def _process_job(job_id: str) -> None:
         if job is None:
             raise ValueError(f"job not found: {job_id}")
         try:
-            job = await repository.transition(job, JobStatus.PROCESSING)
+            for stage in PIPELINE_STAGES:
+                job = await repository.transition(job, stage)
             job.result_summary = "Fake transcript completed successfully."
             job.processed_at = datetime.now(timezone.utc)
             await session.commit()
             await session.refresh(job)
             await repository.transition(job, JobStatus.COMPLETED)
         except Exception:
-            if job.status == JobStatus.PROCESSING.value:
+            if JobStatus(job.status) in PIPELINE_STAGES:
                 await repository.transition(job, JobStatus.FAILED)
             raise
 

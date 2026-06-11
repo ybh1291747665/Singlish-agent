@@ -12,7 +12,10 @@ class JobStatus(StrEnum):
     CREATED = "created"
     UPLOADED = "uploaded"
     QUEUED = "queued"
-    PROCESSING = "processing"
+    PREPROCESSING = "preprocessing"
+    TRANSCRIBING = "transcribing"
+    NORMALIZING = "normalizing"
+    GENERATING_REPORT = "generating_report"
     COMPLETED = "completed"
     FAILED = "failed"
 
@@ -20,8 +23,11 @@ class JobStatus(StrEnum):
 ALLOWED_TRANSITIONS: dict[JobStatus, set[JobStatus]] = {
     JobStatus.CREATED: {JobStatus.UPLOADED},
     JobStatus.UPLOADED: {JobStatus.QUEUED, JobStatus.FAILED},
-    JobStatus.QUEUED: {JobStatus.PROCESSING, JobStatus.FAILED},
-    JobStatus.PROCESSING: {JobStatus.COMPLETED, JobStatus.FAILED},
+    JobStatus.QUEUED: {JobStatus.PREPROCESSING, JobStatus.FAILED},
+    JobStatus.PREPROCESSING: {JobStatus.TRANSCRIBING, JobStatus.FAILED},
+    JobStatus.TRANSCRIBING: {JobStatus.NORMALIZING, JobStatus.FAILED},
+    JobStatus.NORMALIZING: {JobStatus.GENERATING_REPORT, JobStatus.FAILED},
+    JobStatus.GENERATING_REPORT: {JobStatus.COMPLETED, JobStatus.FAILED},
     JobStatus.COMPLETED: set(),
     JobStatus.FAILED: set(),
 }
