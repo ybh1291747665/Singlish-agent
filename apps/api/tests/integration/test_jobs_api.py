@@ -215,6 +215,13 @@ def test_export_job_returns_markdown_document_for_completed_job() -> None:
                 "sample_rate_hz": 16000,
                 "channels": 1,
                 "normalized_format": "pcm_s16le",
+                "speech_segments": [
+                    {
+                        "start_seconds": 0.0,
+                        "end_seconds": 2.4,
+                    }
+                ],
+                "silence_segments": [],
             },
             "transcription": {
                 "provider": "fake",
@@ -225,17 +232,33 @@ def test_export_job_returns_markdown_document_for_completed_job() -> None:
                         "end_seconds": 2.4,
                         "text": "wah lau eh this queue quite fast lah",
                         "confidence": 0.94,
+                        "low_confidence": True,
                     }
                 ],
             },
             "normalization": {
                 "normalized_transcript": "wah lau eh this queue quite fast lah",
                 "standard_english": "Wow, this queue is quite fast.",
+                "simplified_chinese": "\u54c7\uff0c\u8fd9\u4e2a\u961f\u4f0d\u8d70\u5f97\u5f88\u5feb\u3002",
                 "glossary_hits": ["wah lau eh", "lah"],
+                "translation_provider": "fallback",
             },
             "report": {
                 "summary": "Speaker remarks that the queue moved quickly.",
                 "key_phrases": ["queue", "fast"],
+            },
+            "reprocess": {
+                "low_confidence_segments": [
+                    {
+                        "start_seconds": 0.0,
+                        "end_seconds": 2.4,
+                        "text": "wah lau eh this queue quite fast lah",
+                        "confidence": 0.94,
+                        "low_confidence": True,
+                    }
+                ],
+                "reprocess_status": "not_requested",
+                "reprocess_attempts": 0,
             },
         }
     )
@@ -245,6 +268,8 @@ def test_export_job_returns_markdown_document_for_completed_job() -> None:
     assert response.status_code == 200
     assert response.headers["content-disposition"].endswith(f"sample-{job_id}.md\"")
     assert "## Summary" in response.text
+    assert "## Simplified Chinese" in response.text
+    assert "## Low-confidence Reprocess" in response.text
     assert "Speaker remarks that the queue moved quickly." in response.text
     app.dependency_overrides.clear()
 
@@ -352,6 +377,78 @@ def test_get_job_segments_returns_paginated_segments() -> None:
             "end_seconds": 2.0,
             "text": "second",
             "confidence": 0.92,
+            "low_confidence": False,
         }
     ]
+    app.dependency_overrides.clear()
+
+
+def test_reprocess_low_confidence_marks_job_reprocess_status() -> None:
+    from singlish_agent_api.api.routes import jobs as jobs_module
+
+    session = FakeSession()
+
+    class FakeStorage:
+        async def upload(self, *, object_key: str, content: bytes, content_type: str) -> None:
+            return None
+
+    class FakeQueue:
+        async def enqueue(self, job_id: str) -> None:
+            return None
+
+    async def override_session():
+        yield session
+
+    app.dependency_overrides[jobs_module.get_session] = override_session
+    app.dependency_overrides[jobs_module.get_storage] = lambda: FakeStorage()
+    app.dependency_overrides[jobs_module.get_queue] = lambda: FakeQueue()
+
+    client = TestClient(app)
+    create_response = client.post(
+        "/api/v1/jobs",
+        files={"file": ("sample.wav", b"demo-audio", "audio/wav")},
+    )
+    job_id = create_response.json()["job_id"]
+    job = session.jobs[job_id]
+    job.status = JobStatus.COMPLETED.value
+    job.result_payload = json.dumps(
+        {
+            "transcription": {
+                "provider": "fake",
+                "raw_transcript": "first second third",
+                "segments": [
+                    {
+                        "start_seconds": 0.0,
+                        "end_seconds": 1.0,
+                        "text": "first",
+                        "confidence": 0.91,
+                        "low_confidence": True,
+                    }
+                ],
+            },
+            "reprocess": {
+                "low_confidence_segments": [
+                    {
+                        "start_seconds": 0.0,
+                        "end_seconds": 1.0,
+                        "text": "first",
+                        "confidence": 0.91,
+                        "low_confidence": True,
+                    }
+                ],
+                "reprocess_status": "not_requested",
+                "reprocess_attempts": 0,
+            },
+        }
+    )
+
+    response = client.post(f"/api/v1/jobs/{job_id}/reprocess-low-confidence")
+
+    assert response.status_code == 202
+    assert response.json()["job_id"] == job_id
+    assert response.json()["reprocess_status"] == "queued"
+    assert response.json()["reprocess_attempts"] == 1
+    persisted_payload = json.loads(job.result_payload)
+    assert persisted_payload["reprocess"]["reprocess_status"] == "queued"
+    assert persisted_payload["reprocess"]["reprocess_attempts"] == 1
     app.dependency_overrides.clear()

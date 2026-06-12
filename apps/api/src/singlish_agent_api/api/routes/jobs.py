@@ -10,6 +10,7 @@ from singlish_agent_api.domain.jobs.models import JobStatus
 from singlish_agent_api.domain.jobs.schemas import (
     JobCreateResponse,
     JobDetailResponse,
+    JobReprocessResponse,
     JobResultPayload,
     JobSegmentsResponse,
 )
@@ -139,4 +140,40 @@ async def export_job(
         headers={
             "Content-Disposition": f'attachment; filename="{document.file_name}"',
         },
+    )
+
+
+@router.post("/{job_id}/reprocess-low-confidence", response_model=JobReprocessResponse, status_code=202)
+async def reprocess_low_confidence(
+    job_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> JobReprocessResponse:
+    repository = JobRepository(session)
+    job = await repository.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job not found")
+
+    payload_dict = json.loads(job.result_payload) if job.result_payload else {}
+    reprocess_payload = payload_dict.get("reprocess") or {
+        "low_confidence_segments": [],
+        "reprocess_status": "not_requested",
+        "reprocess_attempts": 0,
+    }
+    low_confidence_segments = reprocess_payload.get("low_confidence_segments") or []
+    reprocess_attempts = int(reprocess_payload.get("reprocess_attempts", 0))
+
+    if low_confidence_segments:
+        reprocess_payload["reprocess_status"] = "queued"
+        reprocess_payload["reprocess_attempts"] = reprocess_attempts + 1
+    else:
+        reprocess_payload["reprocess_status"] = "not_needed"
+        reprocess_payload["reprocess_attempts"] = reprocess_attempts
+
+    payload_dict["reprocess"] = reprocess_payload
+    await repository.set_result_payload(job, payload=payload_dict)
+
+    return JobReprocessResponse(
+        job_id=job.id,
+        reprocess_status=str(reprocess_payload["reprocess_status"]),
+        reprocess_attempts=int(reprocess_payload["reprocess_attempts"]),
     )

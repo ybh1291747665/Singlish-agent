@@ -83,6 +83,9 @@ def _render_txt(*, job: Job, payload: JobResultPayload) -> str:
                 "",
                 "Standard English:",
                 payload.normalization.standard_english,
+                "",
+                "Simplified Chinese:",
+                payload.normalization.simplified_chinese,
             ]
         )
         if payload.normalization.glossary_hits:
@@ -99,6 +102,17 @@ def _render_txt(*, job: Job, payload: JobResultPayload) -> str:
                 "",
                 "Summary:",
                 payload.report.summary,
+            ]
+        )
+    if payload.reprocess:
+        sections.extend(
+            [
+                "",
+                "Reprocess status:",
+                payload.reprocess.reprocess_status,
+                "",
+                f"Low-confidence segments: {len(payload.reprocess.low_confidence_segments)}",
+                f"Reprocess attempts: {payload.reprocess.reprocess_attempts}",
             ]
         )
     return "\n".join(sections).strip() + "\n"
@@ -130,6 +144,10 @@ def _render_markdown(*, job: Job, payload: JobResultPayload) -> str:
                 "## Standard English",
                 "",
                 payload.normalization.standard_english,
+                "",
+                "## Simplified Chinese",
+                "",
+                payload.normalization.simplified_chinese,
             ]
         )
         if payload.normalization.glossary_hits:
@@ -148,6 +166,17 @@ def _render_markdown(*, job: Job, payload: JobResultPayload) -> str:
                 "## Summary",
                 "",
                 payload.report.summary,
+            ]
+        )
+    if payload.reprocess:
+        sections.extend(
+            [
+                "",
+                "## Low-confidence Reprocess",
+                "",
+                f"- Status: `{payload.reprocess.reprocess_status}`",
+                f"- Flagged segments: `{len(payload.reprocess.low_confidence_segments)}`",
+                f"- Attempts: `{payload.reprocess.reprocess_attempts}`",
             ]
         )
     return "\n".join(sections).strip() + "\n"

@@ -139,6 +139,18 @@ def test_process_job_runs_full_pipeline_and_marks_job_completed(monkeypatch) -> 
         "preprocess_audio_file",
         fake_preprocess_audio_file,
     )
+    monkeypatch.setattr(
+        tasks_module,
+        "detect_speech_segments",
+        lambda *args, **kwargs: [{"start_seconds": 0.0, "end_seconds": 2.4}],
+        raising=False,
+    )
+    monkeypatch.setattr(
+        tasks_module,
+        "build_silence_segments",
+        lambda *args, **kwargs: [],
+        raising=False,
+    )
     monkeypatch.setattr(tasks_module, "get_transcription_provider", lambda: FakeTranscriptionProvider())
 
     async def create_job() -> str:
@@ -173,9 +185,22 @@ def test_process_job_runs_full_pipeline_and_marks_job_completed(monkeypatch) -> 
     assert refreshed.processed_at is not None
     payload = json.loads(refreshed.result_payload)
     assert payload["preprocessing"]["duration_seconds"] == 2.4
+    assert payload["preprocessing"]["speech_segments"] == [
+        {"start_seconds": 0.0, "end_seconds": 2.4}
+    ]
+    assert payload["preprocessing"]["silence_segments"] == []
     assert payload["transcription"]["provider"] == "fake"
     assert payload["transcription"]["raw_transcript"] == "wah lau eh this queue quite fast lah"
+    assert payload["transcription"]["segments"][0]["low_confidence"] is True
     assert payload["normalization"]["standard_english"] == "Wow, this queue is quite fast."
+    assert (
+        payload["normalization"]["simplified_chinese"]
+        == "\u54c7\uff0c\u8fd9\u4e2a\u961f\u4f0d\u8d70\u5f97\u5f88\u5feb\u3002"
+    )
+    assert payload["normalization"]["translation_provider"] == "fallback"
+    assert payload["reprocess"]["reprocess_status"] == "not_requested"
+    assert payload["reprocess"]["reprocess_attempts"] == 0
+    assert len(payload["reprocess"]["low_confidence_segments"]) == 1
     assert payload["report"]["summary"] == "Speaker remarks that the queue moved quickly."
 
 
@@ -244,6 +269,18 @@ def test_process_job_marks_job_failed_when_processing_errors(monkeypatch) -> Non
         tasks_module,
         "preprocess_audio_file",
         fake_preprocess_audio_file,
+    )
+    monkeypatch.setattr(
+        tasks_module,
+        "detect_speech_segments",
+        lambda *args, **kwargs: [{"start_seconds": 0.0, "end_seconds": 2.4}],
+        raising=False,
+    )
+    monkeypatch.setattr(
+        tasks_module,
+        "build_silence_segments",
+        lambda *args, **kwargs: [],
+        raising=False,
     )
     monkeypatch.setattr(tasks_module, "get_transcription_provider", lambda: FakeTranscriptionProvider())
 

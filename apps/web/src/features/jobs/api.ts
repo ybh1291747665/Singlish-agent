@@ -2,6 +2,7 @@ import type {
   JobCreateResponse,
   JobDetailResponse,
   JobExportFormat,
+  JobReprocessResponse,
   JobSegmentsResponse,
 } from "@singlish-agent/contracts";
 
@@ -33,4 +34,10 @@ export function getJobSegments(jobId: string): Promise<JobSegmentsResponse> {
 
 export function getJobExportUrl(jobId: string, exportFormat: JobExportFormat): string {
   return `${API_BASE_URL}/api/v1/jobs/${jobId}/exports/${exportFormat}`;
+}
+
+export function reprocessLowConfidence(jobId: string): Promise<JobReprocessResponse> {
+  return apiFetch<JobReprocessResponse>(`/api/v1/jobs/${jobId}/reprocess-low-confidence`, {
+    method: "POST",
+  });
 }

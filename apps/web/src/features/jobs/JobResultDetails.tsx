@@ -18,6 +18,8 @@ export function JobResultDetails({ resultPayload }: Props) {
           <p>Sample rate: {resultPayload.preprocessing.sample_rate_hz}Hz</p>
           <p>Channels: {resultPayload.preprocessing.channels}</p>
           <p>Normalized format: {resultPayload.preprocessing.normalized_format}</p>
+          <p>Speech segments: {resultPayload.preprocessing.speech_segments.length}</p>
+          <p>Silence segments: {resultPayload.preprocessing.silence_segments.length}</p>
         </div>
       ) : null}
       {resultPayload.transcription ? (
@@ -29,6 +31,8 @@ export function JobResultDetails({ resultPayload }: Props) {
       {resultPayload.normalization ? (
         <div>
           <p>Standard English: {resultPayload.normalization.standard_english}</p>
+          <p>Simplified Chinese: {resultPayload.normalization.simplified_chinese}</p>
+          <p>Translation provider: {resultPayload.normalization.translation_provider}</p>
         </div>
       ) : null}
       {resultPayload.report ? (

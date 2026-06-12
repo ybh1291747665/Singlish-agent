@@ -20,6 +20,12 @@ export type TranscriptSegment = {
   end_seconds: number;
   text: string;
   confidence: number | null;
+  low_confidence?: boolean;
+};
+
+export type TimeRangeSegment = {
+  start_seconds: number;
+  end_seconds: number;
 };
 
 export type PreprocessingResult = {
@@ -27,6 +33,8 @@ export type PreprocessingResult = {
   sample_rate_hz: number;
   channels: number;
   normalized_format: string;
+  speech_segments: TimeRangeSegment[];
+  silence_segments: TimeRangeSegment[];
 };
 
 export type TranscriptionResult = {
@@ -38,7 +46,9 @@ export type TranscriptionResult = {
 export type NormalizationResult = {
   normalized_transcript: string;
   standard_english: string;
+  simplified_chinese: string;
   glossary_hits: string[];
+  translation_provider: string;
 };
 
 export type ReportResult = {
@@ -46,11 +56,18 @@ export type ReportResult = {
   key_phrases: string[];
 };
 
+export type ReprocessResult = {
+  low_confidence_segments: TranscriptSegment[];
+  reprocess_status: string;
+  reprocess_attempts: number;
+};
+
 export type JobResultPayload = {
   preprocessing: PreprocessingResult | null;
   transcription: TranscriptionResult | null;
   normalization: NormalizationResult | null;
   report: ReportResult | null;
+  reprocess: ReprocessResult | null;
 };
 
 export type HealthResponse = {
@@ -81,4 +98,10 @@ export type JobSegmentsResponse = {
   status: JobStatus;
   total_segments: number;
   segments: TranscriptSegment[];
+};
+
+export type JobReprocessResponse = {
+  job_id: string;
+  reprocess_status: string;
+  reprocess_attempts: number;
 };

@@ -28,6 +28,12 @@ export function JobSegmentList({ segments }: Props) {
                 {formatTimestamp(segment.start_seconds)} - {formatTimestamp(segment.end_seconds)}
               </p>
               <p>{segment.text}</p>
+              {segment.confidence !== null ? (
+                <p>
+                  Confidence: {segment.confidence.toFixed(2)}
+                  {segment.low_confidence ? " (low confidence)" : ""}
+                </p>
+              ) : null}
             </li>
           ))}
         </ol>

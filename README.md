@@ -36,7 +36,7 @@ python -m singlish_agent_api.worker.run_worker
 ```
 
 For real offline ASR, start the worker from the `singlish-agent` conda environment so it can load `faster-whisper` and related audio dependencies.
-That same environment is also used for real audio preprocessing metadata extraction and normalization.
+That same environment is also used for real audio preprocessing metadata extraction, VAD, and bilingual normalization.
 
 ## Start The Web App
 
@@ -52,8 +52,10 @@ npm run dev --workspace @singlish-agent/web
 4. Confirm the UI shows the new `job_id`.
 5. Wait for polling to refresh the job status to `completed`.
 6. Confirm the job reaches `completed` and a transcription provider is shown in the result details.
-7. Download a Markdown or SRT export from the Exports section.
-8. Confirm the transcript segments section shows timestamped timeline items.
+7. Confirm the structured result card shows VAD counts, Standard English, and Simplified Chinese output.
+8. Confirm the transcript segments section shows timestamped timeline items and low-confidence markers when applicable.
+9. If low-confidence segments are present, trigger `Reprocess Low-confidence` and confirm the visible status changes.
+10. Download a Markdown or SRT export from the Exports section.
 
 ## Dataset Status
 
@@ -63,4 +65,18 @@ npm run dev --workspace @singlish-agent/web
 - See [docs/evaluation.md](./docs/evaluation.md) and [data/eval/README.md](./data/eval/README.md) for the intended structure.
 - The local annotation workflow now starts from `data/eval/manifest.local.template.jsonl` and `data/eval/annotation-guide.md`.
 
+## Generate A Local Evaluation Manifest
+
+Use the `singlish-agent` conda environment so PyAV is available for duration probing:
+
+```powershell
+& "C:\Users\12917\.conda\envs\singlish-agent\python.exe" -m singlish_agent_api.scripts.generate_eval_manifest `
+  --audio-dir data/eval/audio `
+  --dataset-root data/eval `
+  --output data/eval/manifest.local.jsonl
+```
+
+This command only creates a JSONL scaffold. It does not invent transcripts, translations, or labels.
+
+See [docs/offline-pipeline-notes.md](./docs/offline-pipeline-notes.md) for the new offline VAD, bilingual output, and reprocess notes.
 See [docs/启动停止手册.md](./docs/启动停止手册.md) for a fuller start/stop and troubleshooting runbook.

@@ -8,8 +8,9 @@ import type {
 
 import { fetchHealth } from "../features/health/api";
 import { HealthPanel } from "../features/health/HealthPanel";
-import { createJob, getJob, getJobSegments } from "../features/jobs/api";
+import { createJob, getJob, getJobSegments, reprocessLowConfidence } from "../features/jobs/api";
 import { JobExportLinks } from "../features/jobs/JobExportLinks";
+import { ReprocessButton } from "../features/jobs/ReprocessButton";
 import { JobResultDetails } from "../features/jobs/JobResultDetails";
 import { JobSegmentList } from "../features/jobs/JobSegmentList";
 import { JobStageList } from "../features/jobs/JobStageList";
@@ -20,6 +21,7 @@ export default function App() {
   const [createdJob, setCreatedJob] = useState<JobCreateResponse | null>(null);
   const [jobDetail, setJobDetail] = useState<JobDetailResponse | null>(null);
   const [jobSegments, setJobSegments] = useState<JobSegmentsResponse | null>(null);
+  const [isReprocessSubmitting, setIsReprocessSubmitting] = useState(false);
 
   useEffect(() => {
     fetchHealth()
@@ -43,20 +45,35 @@ export default function App() {
     }
 
     const intervalId = window.setInterval(() => {
-      getJob(createdJob.job_id).then(setJobDetail).catch(() => undefined);
-      getJobSegments(createdJob.job_id).then(setJobSegments).catch(() => undefined);
+      void refreshJob(createdJob.job_id);
     }, 1500);
 
     return () => window.clearInterval(intervalId);
   }, [createdJob]);
 
+  async function refreshJob(jobId: string) {
+    const [detail, segments] = await Promise.all([getJob(jobId), getJobSegments(jobId)]);
+    setJobDetail(detail);
+    setJobSegments(segments);
+  }
+
   async function handleUpload(file: File) {
     const created = await createJob(file);
     setCreatedJob(created);
-    const detail = await getJob(created.job_id);
-    const segments = await getJobSegments(created.job_id);
-    setJobDetail(detail);
-    setJobSegments(segments);
+    await refreshJob(created.job_id);
+  }
+
+  async function handleReprocess() {
+    if (!createdJob) {
+      return;
+    }
+    setIsReprocessSubmitting(true);
+    try {
+      await reprocessLowConfidence(createdJob.job_id);
+      await refreshJob(createdJob.job_id);
+    } finally {
+      setIsReprocessSubmitting(false);
+    }
   }
 
   return (
@@ -74,6 +91,11 @@ export default function App() {
           <p>result_summary: {jobDetail?.result_summary ?? "pending"}</p>
           <JobStageList status={jobDetail?.status ?? createdJob.status} />
           <JobResultDetails resultPayload={jobDetail?.result_payload ?? null} />
+          <ReprocessButton
+            disabled={isReprocessSubmitting}
+            onTrigger={handleReprocess}
+            reprocess={jobDetail?.result_payload?.reprocess ?? null}
+          />
           <JobSegmentList segments={jobSegments?.segments ?? []} />
           {jobDetail?.status === "completed" ? (
             <JobExportLinks jobId={createdJob.job_id} />

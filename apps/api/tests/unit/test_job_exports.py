@@ -27,6 +27,13 @@ def build_payload() -> JobResultPayload:
                 "sample_rate_hz": 16000,
                 "channels": 1,
                 "normalized_format": "pcm_s16le",
+                "speech_segments": [
+                    {
+                        "start_seconds": 0.0,
+                        "end_seconds": 2.4,
+                    }
+                ],
+                "silence_segments": [],
             },
             "transcription": {
                 "provider": "faster_whisper",
@@ -37,23 +44,32 @@ def build_payload() -> JobResultPayload:
                         "end_seconds": 1.2,
                         "text": "This queue",
                         "confidence": None,
+                        "low_confidence": False,
                     },
                     {
                         "start_seconds": 1.2,
                         "end_seconds": 2.4,
                         "text": "is quite fast.",
                         "confidence": None,
+                        "low_confidence": False,
                     },
                 ],
             },
             "normalization": {
                 "normalized_transcript": "This queue is quite fast.",
                 "standard_english": "This queue is quite fast.",
+                "simplified_chinese": "[translation pending] This queue is quite fast.",
                 "glossary_hits": ["lah"],
+                "translation_provider": "fallback",
             },
             "report": {
                 "summary": "Speaker remarks that the queue moved quickly.",
                 "key_phrases": ["queue", "fast"],
+            },
+            "reprocess": {
+                "low_confidence_segments": [],
+                "reprocess_status": "not_needed",
+                "reprocess_attempts": 0,
             },
         }
     )
@@ -81,6 +97,8 @@ def test_build_job_export_renders_markdown_summary() -> None:
     assert document.media_type == "text/markdown; charset=utf-8"
     assert "# Singlish Agent Export" in document.content
     assert "## Standard English" in document.content
+    assert "## Simplified Chinese" in document.content
+    assert "## Low-confidence Reprocess" in document.content
     assert "Speaker remarks that the queue moved quickly." in document.content
 
 
