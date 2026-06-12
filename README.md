@@ -55,4 +55,11 @@ npm run dev --workspace @singlish-agent/web
 7. Download a Markdown or SRT export from the Exports section.
 8. Confirm the transcript segments section shows timestamped timeline items.
 
+## Dataset Status
+
+- There is no formal evaluation dataset committed yet.
+- Local dataset scaffolding now lives under `data/`.
+- Public redistributable demo assets should go under `examples/`.
+- See [docs/evaluation.md](./docs/evaluation.md) and [data/eval/README.md](./data/eval/README.md) for the intended structure.
+
 See [docs/启动停止手册.md](./docs/启动停止手册.md) for a fuller start/stop and troubleshooting runbook.
