@@ -61,5 +61,6 @@ npm run dev --workspace @singlish-agent/web
 - Local dataset scaffolding now lives under `data/`.
 - Public redistributable demo assets should go under `examples/`.
 - See [docs/evaluation.md](./docs/evaluation.md) and [data/eval/README.md](./data/eval/README.md) for the intended structure.
+- The local annotation workflow now starts from `data/eval/manifest.local.template.jsonl` and `data/eval/annotation-guide.md`.
 
 See [docs/启动停止手册.md](./docs/启动停止手册.md) for a fuller start/stop and troubleshooting runbook.

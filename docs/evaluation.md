@@ -46,10 +46,28 @@ Use JSONL, one clip per line.
 Example location:
 
 - `data/eval/manifest.example.jsonl`
+- `data/eval/manifest.local.template.jsonl`
 
 Recommended local file:
 
 - `data/eval/manifest.local.jsonl`
+
+Recommended split file:
+
+- `data/eval/splits.local.json`
+
+## Annotation Workflow
+
+The local annotation workflow is now documented in:
+
+- `data/eval/annotation-guide.md`
+
+That guide defines:
+
+- Required fields
+- Transcript vs Standard English rules
+- Split rules
+- A minimum pilot collection target
 
 ## Publication Rule
 

@@ -1,0 +1,10 @@
+{
+  "train": [],
+  "dev": [
+    "pilot-clean-001"
+  ],
+  "test": [
+    "pilot-conv-001",
+    "pilot-switch-001"
+  ]
+}
